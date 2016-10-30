@@ -712,17 +712,17 @@ namespace xjson
 			return NULL;
 		}
 	}
-	json_t *build_json(const std::string &str)
+	static inline json_t *build_json(const std::string &str)
 	{
 		int pos = 0;
 		return json_parser::get_json(pos, (int)str.size(), str.c_str());
 	}
-	json_t *build_json(const char *str)
+	static inline json_t *build_json(const char *str)
 	{
 		int pos = 0;
 		return json_parser::get_json(pos, (int)strlen(str), str);
 	}
-	void destory_json(json_t *json)
+	static inline void destory_json(json_t *json)
 	{
 		delete json;
 	}
