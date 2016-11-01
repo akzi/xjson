@@ -61,7 +61,6 @@ namespace xjson
 		struct null 
 		{
 		};
-
 		obj_t()
 			:type_(e_null)
 		{
@@ -83,20 +82,20 @@ namespace xjson
 		{
 			switch (type_)
 			{
-			case xjson::e_null:
-			case xjson::e_num:
-			case xjson::e_bool:
-			case xjson::e_float:
+			case e_null:
+			case e_num:
+			case e_bool:
+			case e_float:
 				break;
-			case xjson::e_str:
+			case e_str:
 				delete val_.str_;
 				break;
-			case xjson::e_obj:
+			case e_obj:
 				for (auto&itr : *val_.obj_)
 					delete itr.second;
 				delete val_.obj_;
 				break;
-			case xjson::e_vec:
+			case e_vec:
 				for (auto&itr : *val_.vec_)
 					delete itr;
 				delete val_.vec_;
@@ -637,7 +636,7 @@ namespace xjson
 						{
 							double d = std::strtod(tmp.c_str(), 0);
 							if (errno == ERANGE)
-								return false;
+								goto fail;
 							json[key] = d;
 							key.clear();
 						}
@@ -645,7 +644,7 @@ namespace xjson
 						{
 							int64_t val = std::strtoll(tmp.c_str(), 0, 10);
 							if (errno == ERANGE)
-								return false;
+								goto fail;
 							json[key] = val;
 							key.clear();
 						}
@@ -658,17 +657,17 @@ namespace xjson
 			return NULL;
 		}
 	}
-	static inline obj_t *build(const std::string &str)
+	inline obj_t *build(const std::string &str)
 	{
 		int pos = 0;
 		return json_parser::get_obj(pos, (int)str.size(), str.c_str());
 	}
-	static inline obj_t *build(const char *str)
+	inline obj_t *build(const char *str)
 	{
 		int pos = 0;
 		return json_parser::get_obj(pos, (int)strlen(str), str);
 	}
-	static inline void destory(obj_t *json)
+	inline void destory(obj_t *json)
 	{
 		delete json;
 	}
