@@ -10,16 +10,7 @@
 
 namespace xjson
 {
-	enum type_t
-	{
-		e_null,
-		e_num,
-		e_str,
-		e_bool,
-		e_float,
-		e_obj,
-		e_vec,
-	};
+	
 	class type_error: public std::exception
 	{
 	public:
@@ -45,6 +36,17 @@ namespace xjson
 
 	struct obj_t
 	{
+		enum type_t
+		{
+			e_null,
+			e_num,
+			e_str,
+			e_bool,
+			e_float,
+			e_obj,
+			e_vec,
+		};
+
 		type_t type_;
 		union value_t
 		{
