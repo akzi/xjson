@@ -20,34 +20,28 @@ namespace xjson
 		e_obj,
 		e_vec,
 	};
-	struct obj_t;
-	class json_t
+	class type_error: public std::exception
 	{
 	public:
-		json_t()
+		type_error(const char* file,int line, const char* errstr)
 		{
-
+			errstr_.append("FILE: ");
+			errstr_.append(file);
+			errstr_.append("  LINE: ");
+			errstr_.append(std::to_string(line));
+			errstr_.append(" xjson_assert ( ");
+			errstr_.append(errstr);
+			errstr_.append(" ) failed");
 		}
-		json_t(const json_t&self);
-		~json_t();
-		obj_t &operator[](const std::string &key);
-		obj_t &vec();
-		json_t &add(const std::string &key, obj_t *obj)
+		const char *str()
 		{
-			vals_.insert(std::make_pair(key, obj));
-			return *this;
+			return errstr_.c_str();
 		}
-		bool erase(const std::string &key)
-		{
-			if (vals_.find(key) == vals_.end())
-				return false;
-			vals_.erase(vals_.find(key));
-			return true;
-		}
-		std::string to_string();
-		obj_t *vec_ = nullptr;
-		std::map<std::string, obj_t*> vals_;
+	private:
+		std::string errstr_;
 	};
+
+	#define xjson_assert(x) if(!(x)) throw type_error(__FILE__, __LINE__, #x);
 
 	struct obj_t
 	{
@@ -58,16 +52,32 @@ namespace xjson
 			int64_t num_;
 			double double_;
 			bool bool_;
-			json_t *obj_;
+			std::map<std::string, obj_t *> *obj_;
 			std::vector<obj_t*> *vec_;
 		} val_;
+
+		struct null 
+		{
+		};
 
 		obj_t()
 			:type_(e_null)
 		{
-			memset(&val_, 0, sizeof(val_));
 		}
+		obj_t &operator = (obj_t && self)
+		{
+			reset();
+			type_ = self.type_;
+			val_ = self.val_;
+			self.type_ = e_null;
+			return *this;
+		}
+
 		virtual ~obj_t()
+		{
+			reset();
+		}
+		void reset()
 		{
 			switch (type_)
 			{
@@ -80,6 +90,8 @@ namespace xjson
 				delete val_.str_;
 				break;
 			case xjson::e_obj:
+				for (auto&itr : *val_.obj_)
+					delete itr.second;
 				delete val_.obj_;
 				break;
 			case xjson::e_vec:
@@ -90,124 +102,85 @@ namespace xjson
 			default:
 				break;
 			}
+			type_ = e_null;
 		}
-		obj_t &operator=(const obj_t&self)
-		{
-			memset(&val_, 0, sizeof(val_));
-			assign(self);
-			return *this;
-		}
-		obj_t(const obj_t &self)
-			:type_(e_null)
-		{
-			memset(&val_, 0, sizeof(val_));
-			assign(self);
-		}
-		void assign(const obj_t &self)
-		{
-			switch (self.type_)
-			{
-			case e_bool:
-				*this = self.val_.bool_;
-				break;
-			case e_num:
-				*this = self.val_.num_;
-				break;
-			case e_str:
-				*this = *self.val_.str_;
-				break;
-			case e_obj:
-				*this = *self.val_.obj_;
-				break;
-			case e_float:
-				*this = self.val_.double_;
-				break;
-			case e_vec:
-				if (!val_.vec_)
-					val_.vec_ = new std::vector<obj_t *>;
-				for (auto &itr : *self.val_.vec_)
-				{
-					val_.vec_->push_back(new obj_t(*itr));
-				}
-			case e_null:
-				break;
-			default:
-				assert(false);
-			}
-			type_ = self.type_;
-		}
+		
 		template<typename T>
-		typename std::enable_if<std::is_floating_point<T>::value, void>::type
+		typename std::enable_if<std::is_floating_point<T>::value, obj_t &>::type
 			operator=(T val)
 		{
-			assert(type_ == e_null);
+			reset();
 			type_ = e_float;
 			val_.double_ = val;
+			return *this;
 		}
-		void operator=(const char *val)
+		obj_t &operator=(nullptr_t)
 		{
-			assert(type_ == e_null);
+			reset();
+			return *this;
+		}
+		obj_t &operator=(const char *val)
+		{
+			reset();
 			type_ = e_str;
 			val_.str_ = new std::string(val);
+			return *this;
 		}
 
-		void operator=(const std::string &val)
+		obj_t &operator =(const std::string &val)
 		{
-			assert(type_ == e_null);
+			reset();
 			type_ = e_str;
 			val_.str_ = new std::string(val);
+			return *this;
 		}
 		template<typename T>
-		typename std::enable_if<std::is_integral<T>::value, void>::type
+		typename std::enable_if<std::is_integral<T>::value, obj_t &>::type
 			operator=(T val)
 		{
-			assert(type_ == e_null);
+			reset();
 			type_ = e_num;
 			val_.num_ = val;
+			return *this;
 		}
-		void operator=(bool val)
+		
+		obj_t &operator =(bool val)
 		{
-			assert(type_ == e_null);
+			reset();
 			type_ = e_bool;
 			val_.bool_ = val;
-		}
-		void operator=(const json_t &obj)
-		{
-			assert(type_ == e_null);
-			type_ = e_obj;
-			val_.obj_ = new json_t(obj);
-		}
-		void operator=(const json_t *obj)
-		{
-			assert(type_ == e_null);
-			type_ = e_obj;
-			val_.obj_ = const_cast<json_t*>(obj);
+			return *this;
 		}
 		obj_t &operator[](const std::string & key)
 		{
-			assert(type_ == e_null || type_ == e_obj);
-			type_ = e_obj;
-			if (!!!val_.obj_)
-				val_.obj_ = new json_t();
-			return (*val_.obj_)[key];
+			return operator[](key.c_str());
 		}
 
 		obj_t &operator[](const char *key)
 		{
-			assert(type_ == e_null || type_ == e_obj);
-			type_ = e_obj;
-			if (!!!val_.obj_)
-				val_.obj_ = new json_t();
-			return (*val_.obj_)[key];
+			if (type_ != e_obj)
+			{
+				reset();
+				type_ = e_obj;
+				val_.obj_ = new std::map<std::string, obj_t *>;
+			}
+			auto itr = val_.obj_->find(key);
+			if (itr != val_.obj_->end())
+				return *itr->second;
+			obj_t *o = new obj_t;
+			val_.obj_->emplace(key, o);
+			return *o;
 		}
 
 		template<typename T>
 		obj_t& add(const T &val)
 		{
-			assert(type_ == e_vec || type_ == e_null);
-			type_ = e_vec;
-			if (val_.vec_ == NULL)
+			if (type_ != e_vec)
+			{
+				reset();
+				type_ = e_vec;
 				val_.vec_ = new std::vector<obj_t *>;
+			}
 			obj_t *obj = new obj_t;
 			*obj = val;
 			val_.vec_->push_back(obj);
@@ -215,11 +188,25 @@ namespace xjson
 		}
 		obj_t& add(obj_t *obj)
 		{
-			assert(type_ == e_vec || type_ == e_null);
-			type_ = e_vec;
-			if (val_.vec_ == NULL)
+			if (type_ != e_vec)
+			{
+				reset();
+				type_ = e_vec;
 				val_.vec_ = new std::vector<obj_t *>;
+			}
 			val_.vec_->push_back(obj);
+			return *this;
+		}
+		obj_t &add(nullptr_t )
+		{
+			if (type_ != e_vec)
+			{
+				reset();
+				type_ = e_vec;
+				val_.vec_ = new std::vector<obj_t *>;
+			}
+			
+			val_.vec_->push_back(new obj_t);
 			return *this;
 		}
 		template<class T>
@@ -227,43 +214,43 @@ namespace xjson
 			!std::is_same<T, bool>::value, T>::type
 			get()
 		{
-			assert(type_ == e_num);
+			xjson_assert(type_ == e_num);
 			return static_cast<T>(val_.num_);
 		}
 		template<class T>
 		typename std::enable_if<std::is_same<T, bool>::value, T>::type
 			get()
 		{
-			assert(type_ == e_bool);
+			xjson_assert(type_ == e_bool);
 			return val_.bool_;
 		}
 		template<class T>
 		typename std::enable_if<std::is_floating_point<T>::value, T>::type
 			get()
 		{
-			assert(type_ == e_float);
+			xjson_assert(type_ == e_float);
 			return static_cast<T>(val_.double_);
 		}
 		template<class T>
 		typename std::enable_if<std::is_same<T, std::string>::value, std::string &>::type
 			get()
 		{
-			assert(type_ == e_str);
+			xjson_assert(type_ == e_str);
 			return *val_.str_;
 		}
 		template<typename T>
 		T get(std::size_t idx)
 		{
-			assert(type_ == e_vec);
-			assert(val_.vec_);
-			assert(idx < val_.vec_->size());
+			xjson_assert(type_ == e_vec);
+			xjson_assert(val_.vec_);
+			xjson_assert(idx < val_.vec_->size());
 			return ((*val_.vec_)[idx])->get<T>();
 		}
 		obj_t &get(std::size_t idx)
 		{
-			assert(type_ == e_vec);
-			assert(val_.vec_);
-			assert(idx < val_.vec_->size());
+			xjson_assert(type_ == e_vec);
+			xjson_assert(val_.vec_);
+			xjson_assert(idx < val_.vec_->size());
 			return *((*val_.vec_)[idx]);
 		}
 		bool is_null()
@@ -272,7 +259,7 @@ namespace xjson
 		}
 		std::size_t len()
 		{
-			assert(type_ == e_vec);
+			xjson_assert(type_ == e_vec);
 			return val_.vec_->size();
 		}
 		type_t type()
@@ -290,79 +277,46 @@ namespace xjson
 			case e_str:
 				return "\"" + *val_.str_ + "\"";
 			case e_obj:
-				return val_.obj_->to_string();
+				do 
+				{
+					std::string str("{");
+					for (auto &itr : *val_.obj_)
+					{
+						str += "\"" + itr.first + "\"";
+						str += " : ";
+						str += itr.second->str();
+						str += ", ";
+					}
+					str.pop_back();
+					str.pop_back();
+					str += "}";
+					return str;
+
+				} while (0);
 			case e_float:
 				return std::to_string(val_.double_);
 			case e_vec:
-				return vec2str();
+				do 
+				{
+					std::string str("[");
+					xjson_assert(type_ == e_vec);
+					xjson_assert(val_.vec_ != NULL);
+
+					for (auto &itr : *val_.vec_)
+					{
+						str += itr->str();
+						str += ", ";
+					}
+					str.pop_back();
+					str.pop_back();
+					str += "]";
+					return str;
+				} while (0);
 			}
 			return "null";
 		}
-		std::string vec2str()
-		{
-			std::string str("[");
-			assert(type_ == e_vec);
-			assert(val_.vec_);
-
-			for (auto &itr : *val_.vec_)
-			{
-				str += itr->str();
-				str += ", ";
-			}
-			str.pop_back();
-			str.pop_back();
-			str += "]";
-			return str;
-		}
 	};
-	static const obj_t null;
-	inline json_t::json_t(const json_t&self)
-	{
-		for (auto &itr : self.vals_)
-		{
-			obj_t *val = new obj_t(*itr.second);
-			vals_[itr.first] = val;
-		}
-		if (vec_)
-			delete vec_;
-	}
-
-	inline json_t::~json_t()
-	{
-		for (auto &itr : vals_)
-			delete itr.second;
-	}
 	
-	inline obj_t &json_t::operator[](const std::string &key)
-	{
-		if (vals_.find(key) != vals_.end())
-			return *vals_[key];
-		obj_t *val = new obj_t();
-		val->type_ = e_null;
-		vals_[key] = val;
-		return *val;
-	}
-	inline obj_t &json_t::vec()
-	{
-		if (!vec_)
-			vec_ = new obj_t;
-		return *vec_;
-	}
-	inline std::string json_t::to_string()
-	{
-		std::string str("{");
-		for (auto &itr : vals_)
-		{
-			str += "\"" + itr.first + "\"";
-			str += " : ";
-			str += itr.second->str();
-			str += ", ";
-		}
-		str.pop_back();
-		str.pop_back();
-		str += "}";
-		return str;
-	}
 	namespace json_parser
 	{
 		static inline bool
@@ -475,7 +429,7 @@ namespace xjson
 			return tmp;
 		}
 
-		static inline json_t *get_json(int &pos, int len, const char * str);
+		static inline obj_t *get_obj(int &pos, int len, const char * str);
 		static inline obj_t* get_vec(int &pos, int len, const char *str)
 		{
 			obj_t *vec = new obj_t;
@@ -507,15 +461,15 @@ namespace xjson
 				case 'n':
 					if (get_null(pos, len, str))
 					{
-						vec->add(null);
+						vec->add(nullptr);
 						break;
 					}
 				case '{':
 				{
-					json_t *json = get_json(pos, len, str);
-					if (!!!json)
+					obj_t *o = get_obj(pos, len, str);
+					if (!o)
 						goto fail;
-					vec->add(json);
+					vec->add(o);
 					break;
 				}
 				case 'f':
@@ -574,10 +528,10 @@ namespace xjson
 						goto fail;\
 		} while(0)
 
-		static inline json_t *get_json(int &pos, int len, const char * str)
+		static inline obj_t *get_obj(int &pos, int len, const char * str)
 		{
-			json_t *json_ptr = new json_t;
-			json_t &json = *json_ptr;
+			obj_t *obj_ptr = new obj_t;
+			obj_t &json = *obj_ptr;
 			std::string key;
 
 			skip_space(pos, len, str);
@@ -585,16 +539,6 @@ namespace xjson
 				goto fail;
 			if (str[pos] == '{')
 				++pos;
-			else if (str[pos] == '[')
-			{
-				obj_t *vec = get_vec(pos, len, str);
-				if (vec) 
-				{
-					json_ptr->vec_ = vec;
-					return json_ptr;
-				}
-				goto fail;
-			}
 			while (pos < len)
 			{
 				switch (str[pos])
@@ -635,16 +579,16 @@ namespace xjson
 				{
 					if (key.empty() || get_null(pos, len, str) == false)
 						goto fail;
-					json[key] = null;
+					json[key] = nullptr;
 				}
 				case '{':
 				{
 					if (key.empty())
 						goto fail;
-					json_t *obj = get_json(pos, len, str);
-					if (obj == NULL)
+					obj_t *o = get_obj(pos, len, str);
+					if (o == NULL)
 						goto fail;
-					json[key] = obj;
+					json[key] = std::move(*o);
 					key.clear();
 					break;
 				}
@@ -652,7 +596,7 @@ namespace xjson
 					if (key.size())
 						goto fail;
 					++pos;
-					return json_ptr;
+					return obj_ptr;
 				case ':':
 				{
 					if (key.empty())
@@ -677,7 +621,7 @@ namespace xjson
 					obj_t *vec = get_vec(pos, len, str);
 					if (!!!vec || key.empty())
 						goto fail;
-					json.add(key, vec);
+					json[key] = std::move(*vec);
 					key.clear();
 					break;
 				}
@@ -708,21 +652,21 @@ namespace xjson
 			}
 
 		fail:
-			delete json_ptr;
+			delete obj_ptr;
 			return NULL;
 		}
 	}
-	json_t *build_json(const std::string &str)
+	static inline obj_t *build(const std::string &str)
 	{
 		int pos = 0;
-		return json_parser::get_json(pos, (int)str.size(), str.c_str());
+		return json_parser::get_obj(pos, (int)str.size(), str.c_str());
 	}
-	json_t *build_json(const char *str)
+	static inline obj_t *build(const char *str)
 	{
 		int pos = 0;
-		return json_parser::get_json(pos, (int)strlen(str), str);
+		return json_parser::get_obj(pos, (int)strlen(str), str);
 	}
-	void destory_json(json_t *json)
+	static inline void destory(obj_t *json)
 	{
 		delete json;
 	}
