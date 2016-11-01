@@ -3,16 +3,27 @@ c++11 json. small and simple
 
 ```cpp
 
-    xjson::json_t json;
-  
-	json["int"] = 1;
-	json["bool"] = false;
-	json["float"] = 0.1;
-	json["str"] = "xjson";
-	json["vec"].add(true);
-	json["vec"].add(true);
-	json["vec"].add("xjson vec");
-	json["obj"]["child"]["int"] = 1;
+	xjson::obj_t obj;
+	obj["int"] = 1;
 
-	std::cout << json.to_string().c_str() << std::endl;
+	obj["bool"] = false;
+	obj["float"] = 0.1;
+	obj["str"] = "xjson";
+	obj["vec"].add(true);
+	obj["vec"].add(true);
+	obj["vec"].add("xjson vec");
+	obj["obj"]["child"]["int"] = 1;
+	try {
+		obj["obj"]["child"]["int"].get<bool>();
+	}
+	catch (xjson::type_error &e)
+	{
+		std::cout << e.str() << std::endl;
+	}
+	std::cout << obj.str().c_str() << std::endl;
+
+	xjson::obj_t *json2 = xjson::build(obj.str());
+
+	assert(json2->str() == obj.str());
+	xjson::destory(json2);
 ```
