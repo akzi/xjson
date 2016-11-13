@@ -65,12 +65,21 @@ namespace xjson
 			:type_(e_null)
 		{
 		}
-		obj_t &operator = (obj_t && self)
+		obj_t(obj_t && self)
 		{
-			reset();
 			type_ = self.type_;
 			val_ = self.val_;
 			self.type_ = e_null;
+		}
+		obj_t &operator = (obj_t && self)
+		{
+			if(this != &self)
+			{
+				reset();
+				type_ = self.type_;
+				val_ = self.val_;
+				self.type_ = e_null;
+			}
 			return *this;
 		}
 
@@ -172,7 +181,16 @@ namespace xjson
 			val_.obj_->emplace(key, o);
 			return *o;
 		}
-
+		obj_t &make_vec()
+		{
+			if(type_ != e_vec)
+			{
+				reset();
+				type_ = e_vec;
+				val_.vec_ = new std::vector<obj_t *>;
+			}
+			return *this;
+		}
 		template<typename T>
 		obj_t& add(const T &val)
 		{
@@ -213,61 +231,61 @@ namespace xjson
 		template<class T>
 		typename std::enable_if<std::is_integral<T>::value &&
 			!std::is_same<T, bool>::value, T>::type
-			get()
+			get() const
 		{
 			xjson_assert(type_ == e_num);
 			return static_cast<T>(val_.num_);
 		}
 		template<class T>
 		typename std::enable_if<std::is_same<T, bool>::value, T>::type
-			get()
+			get() const
 		{
 			xjson_assert(type_ == e_bool);
 			return val_.bool_;
 		}
 		template<class T>
 		typename std::enable_if<std::is_floating_point<T>::value, T>::type
-			get()
+			get() const
 		{
 			xjson_assert(type_ == e_float);
 			return static_cast<T>(val_.double_);
 		}
 		template<class T>
 		typename std::enable_if<std::is_same<T, std::string>::value, std::string &>::type
-			get()
+			get() const
 		{
 			xjson_assert(type_ == e_str);
 			return *val_.str_;
 		}
 		template<typename T>
-		T get(std::size_t idx)
+		T get(std::size_t idx) const
 		{
 			xjson_assert(type_ == e_vec);
 			xjson_assert(val_.vec_);
 			xjson_assert(idx < val_.vec_->size());
 			return ((*val_.vec_)[idx])->get<T>();
 		}
-		obj_t &get(std::size_t idx)
+		obj_t &get(std::size_t idx) const 
 		{
 			xjson_assert(type_ == e_vec);
 			xjson_assert(val_.vec_);
 			xjson_assert(idx < val_.vec_->size());
 			return *((*val_.vec_)[idx]);
 		}
-		bool is_null()
+		bool is_null() const
 		{
 			return type_ == e_null;
 		}
-		std::size_t len()
+		std::size_t size() const 
 		{
 			xjson_assert(type_ == e_vec);
 			return val_.vec_->size();
 		}
-		type_t type()
+		type_t type() const
 		{
 			return type_;
 		}
-		std::string str()
+		std::string str()const
 		{
 			switch (type_)
 			{
