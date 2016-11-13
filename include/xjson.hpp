@@ -65,6 +65,11 @@ namespace xjson
 			:type_(e_null)
 		{
 		}
+// 		template<typename T>
+// 		obj_t(T &&val)
+// 		{
+// 			operator=(std::forward<T>(val));
+// 		}
 		obj_t(obj_t && self)
 		{
 			type_ = self.type_;
@@ -80,6 +85,13 @@ namespace xjson
 				val_ = self.val_;
 				self.type_ = e_null;
 			}
+			return *this;
+		}
+		template<typename T>
+		typename std::enable_if<std::is_class<T>::value, obj_t &>::type
+		operator = (const T &o)
+		{
+			o.pack_xjson(*this);
 			return *this;
 		}
 
@@ -153,7 +165,7 @@ namespace xjson
 			val_.num_ = val;
 			return *this;
 		}
-		
+
 		obj_t &operator =(bool val)
 		{
 			reset();
