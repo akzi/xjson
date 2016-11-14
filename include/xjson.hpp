@@ -6,11 +6,24 @@
 #include <vector>
 #include <ctype.h>
 #include <stdlib.h>
-#pragma once
 
 namespace xjson
 {
-	
+
+	#define HAS_MEMBER(member)\
+	template<typename T, typename... Args>struct has_member_##member\
+	{\
+	private:\
+			template<typename U> static auto Check(int) ->\
+					 decltype(std::declval<U>().member(std::declval<Args>()...), std::true_type()); \
+			template<typename U> static std::false_type Check(...);\
+	public:\
+		enum{value = std::is_same<decltype(Check<T>(0)), std::true_type>::value};\
+	};
+
+	HAS_MEMBER(xpack)
+	HAS_MEMBER(xunpack)
+
 	class type_error: public std::exception
 	{
 	public:
@@ -65,11 +78,11 @@ namespace xjson
 			:type_(e_null)
 		{
 		}
-// 		template<typename T>
-// 		obj_t(T &&val)
-// 		{
-// 			operator=(std::forward<T>(val));
-// 		}
+		template<typename T>
+		obj_t(T &&val)
+		{
+			operator=(std::forward<T>(val));
+		}
 		obj_t(obj_t && self)
 		{
 			type_ = self.type_;
@@ -88,10 +101,10 @@ namespace xjson
 			return *this;
 		}
 		template<typename T>
-		typename std::enable_if<std::is_class<T>::value, obj_t &>::type
+		typename std::enable_if<has_member_xpack<T,obj_t>::value, obj_t &>::type
 		operator = (const T &o)
 		{
-			o.pack_xjson(*this);
+			o.xpack(*this);
 			return *this;
 		}
 
@@ -269,6 +282,16 @@ namespace xjson
 			xjson_assert(type_ == e_str);
 			return *val_.str_;
 		}
+		template<class T>
+		typename std::enable_if<has_member_xunpack<T,obj_t>::value, T>::type
+			get()
+		{
+			xjson_assert(type_ == e_obj);
+			T t;
+			t.xunpack(*this);
+			return std::move(t);
+		}
+
 		template<typename T>
 		T get(std::size_t idx) const
 		{
