@@ -238,7 +238,7 @@ namespace xjson
 				type_ = e_vec;
 				val_.vec_ = new std::vector<obj_t *>;
 			}
-			val_.vec_->push_back(obj);
+			val_.vec_->push_back(obj); 
 			return *this;
 		}
 		obj_t &add(nullptr_t )

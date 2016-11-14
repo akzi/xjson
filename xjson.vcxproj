@@ -113,7 +113,7 @@
     <ClInclude Include="include\xjson.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="samples\sample1.cpp" />
+    <ClCompile Include="unit_test\test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
