@@ -7,7 +7,7 @@ XTEST_SUITE(xjson)
 {
 	XUNIT_TEST(get)
 	{
-		obj_t o(1);
+		obj_t o(int64_t(1));
 		xassert(o.get<int>() == 1);
 	}
 	struct user
@@ -99,5 +99,20 @@ XTEST_SUITE(xjson)
 		no_exist = o["no_exist"].get<decltype(a)>();
 		xassert((!no_exist));
 
+	}
+	XUNIT_TEST(initializer_list)
+	{
+		obj_t o;
+		o["ints"]= { 1,2,3,4,5,6,7 };
+
+		for (auto i : { 1,2,3,4,5,6,7 })
+		{
+			xassert(o["ints"].get<int>(i - 1) == i);
+		}
+		obj_t::map_t m = { {"1", 1 },{"2", "2"},{"true", true} } ;
+		obj_t o2 = m;
+		xassert(o2["1"].get<int>() == 1);
+		xassert(o2["2"].get<std::string>() == "2");
+		xassert(o2["true"].get<bool>() == true);
 	}
 }
