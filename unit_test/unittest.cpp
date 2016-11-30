@@ -1,6 +1,11 @@
 #include "../../xtest/include/xtest.hpp"
 #include "../include/xjson.hpp"
-xtest_run;
+
+int main()
+{
+	xtest::xtest::get_inst().run_test();
+	return 0;
+}
 
 using namespace xjson;
 XTEST_SUITE(xjson)

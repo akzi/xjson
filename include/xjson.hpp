@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iostream>
 #include <vector>
+#include <list>
 #include <ctype.h>
 #include <stdlib.h>
 #include <initializer_list>
@@ -660,7 +661,7 @@ namespace xjson
 
 			return pos < len;
 		}
-		std::string get_text(int &pos, int len, const char *str)
+		static inline std::string get_text(int &pos, int len, const char *str)
 		{
 			assert(len > 0);
 			assert(pos >= 0);
@@ -684,7 +685,7 @@ namespace xjson
 			}
 			throw parser_error();
 		}
-		static bool get_bool(int &pos, int len, const char *str)
+		static inline bool get_bool(int &pos, int len, const char *str)
 		{
 			assert(len > 0);
 			assert(pos >= 0);
@@ -822,7 +823,8 @@ namespace xjson
 					}
 				}
 			}
-
+			
+			return{};
 		}
 
 		#define check_ahead(ch)\
@@ -937,6 +939,7 @@ namespace xjson
 					}
 				}
 			}
+			return {};
 		}
 	}
 	inline obj_t build(const std::string &str)

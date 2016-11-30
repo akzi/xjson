@@ -18,6 +18,13 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\xjson.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sample1.cpp" />
+    <ClCompile Include="unittest.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{791315C7-7853-44AF-95C6-B919E3810B0A}</ProjectGuid>
     <RootNamespace>xjson</RootNamespace>
@@ -109,14 +116,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="include\xjson.hpp" />
-    <ClInclude Include="unit_test\json11.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="unit_test\json11.cpp" />
-    <ClCompile Include="unit_test\unittest.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
