@@ -550,7 +550,7 @@ namespace xjson
 		typename std::enable_if<is_optional<T>::value, T>::type
 			get()
 		{
-			T::type val;
+			typename T::type val;
 			try
 			{
 				val = get<T::type>();
@@ -748,7 +748,7 @@ namespace xjson
 					if (sym == false)
 						sym = true;
 					else
-						return false;
+						return tmp;
 				}
 				else
 					break;
