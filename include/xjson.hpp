@@ -635,7 +635,11 @@ namespace xjson
 					str.pop_back();
 					str += "]";
 					return str;
+
 				} while (0);
+
+			default:
+				return "null";
 			}
 			return "null";
 		}
@@ -801,7 +805,7 @@ namespace xjson
 					++pos;
 					break;
 				default:
-					if (str[pos] == '-' || str[pos] >= '0' && str[pos] <= '9')
+					if (str[pos] == '-' || (str[pos] >= '0' && str[pos] <= '9'))
 					{
 						bool is_float = false;
 						std::string tmp = get_num(is_float, pos, len, str);
@@ -915,7 +919,7 @@ namespace xjson
 					break;
 				}
 				default:
-					if (str[pos] == '-' || str[pos] >= '0' && str[pos] <= '9')
+					if (str[pos] == '-' || (str[pos] >= '0' && str[pos] <= '9'))
 					{
 						bool is_float = false;
 						std::string tmp = get_num(is_float, pos, len, str);
