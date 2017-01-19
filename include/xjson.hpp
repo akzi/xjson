@@ -558,7 +558,7 @@ namespace xjson
 		typename std::enable_if<is_optional<T>::value, T>::type
 			get()
 		{
-			T::type val;
+			typename T::type val;
 			try
 			{
 				val = get<T::type>();
@@ -674,7 +674,11 @@ namespace xjson
 					}
 					str += "]";
 					return str;
+
 				} while (0);
+
+			default:
+				return "null";
 			}
 			return "null";
 		}
@@ -787,7 +791,7 @@ namespace xjson
 					if (sym == false)
 						sym = true;
 					else
-						return false;
+						return tmp;
 				}
 				else
 					break;
@@ -840,7 +844,7 @@ namespace xjson
 					++pos;
 					break;
 				default:
-					if (str[pos] == '-' || str[pos] >= '0' && str[pos] <= '9')
+					if (str[pos] == '-' || (str[pos] >= '0' && str[pos] <= '9'))
 					{
 						bool is_float = false;
 						std::string tmp = get_num(is_float, pos, len, str);
@@ -954,7 +958,7 @@ namespace xjson
 					break;
 				}
 				default:
-					if (str[pos] == '-' || str[pos] >= '0' && str[pos] <= '9')
+					if (str[pos] == '-' || (str[pos] >= '0' && str[pos] <= '9'))
 					{
 						bool is_float = false;
 						std::string tmp = get_num(is_float, pos, len, str);
