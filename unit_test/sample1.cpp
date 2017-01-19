@@ -17,18 +17,29 @@ XTEST_SUITE(sample)
 		obj["vec"].add(true);
 		obj["vec"].add("xjson vec");
 		obj["obj"]["child"]["int"] = 1;
-		try {
-			obj["obj"]["child"]["int"].get<bool>();
-		}
-		catch (xjson::type_error &e)
-		{
-			std::cout << e.str() << std::endl;
-		}
-		std::cout << obj.str().c_str() << std::endl;
 
 		auto json2 = xjson::build(obj.str());
 
 		assert(json2.str() == obj.str());
+
+
+		try 
+		{
+			json2["obj"]["child"]["int"].get<bool>();
+		}
+		catch (std::exception &e)
+		{
+			std::cout << e.what() << std::endl;
+		}
+
+		auto ret = json2["obj"]["child"]["int"].get<xjson::optional<bool>>();
+
+		//no exist
+		xassert(!ret);
+
+		std::cout << obj.str().c_str() << std::endl;
+
+		
 	}
 }
 

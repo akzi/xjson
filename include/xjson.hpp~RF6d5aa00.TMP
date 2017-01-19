@@ -372,14 +372,8 @@ namespace xjson
 			return *this;
 		}
 		template<typename T>
-		obj_t &operator=(const std::map<std::string, T> & vals)
+		obj_t &operator=(std::map<std::string, T> && vals)
 		{
-			if (val_->type_ != e_obj)
-			{
-				reset();
-				val_->type_ = e_obj;
-				val_->obj_ = new map_t;
-			}
 			for (auto &itr: vals)
 			{
 				operator[](itr.first) = itr.second;
@@ -644,11 +638,8 @@ namespace xjson
 						str += itr.second.str();
 						str += ", ";
 					}
-					if (str.size() > 2)
-					{
-						str.pop_back();
-						str.pop_back();
-					}
+					str.pop_back();
+					str.pop_back();
 					str += "}";
 					return str;
 
@@ -667,11 +658,8 @@ namespace xjson
 						str += itr.str();
 						str += ", ";
 					}
-					if (str.size() > 2)
-					{
-						str.pop_back();
-						str.pop_back();
-					}
+					str.pop_back();
+					str.pop_back();
 					str += "]";
 					return str;
 				} while (0);

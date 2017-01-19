@@ -1,11 +1,7 @@
 #include "../../xtest/include/xtest.hpp"
 #include "../include/xjson.hpp"
 
-int main()
-{
-	xtest::xtest::get_inst().run_test();
-	return 0;
-}
+xtest_run;
 
 using namespace xjson;
 XTEST_SUITE(xjson)
@@ -15,12 +11,21 @@ XTEST_SUITE(xjson)
 		obj_t o(int64_t(1));
 		xassert(o.get<int>() == 1);
 	}
+	struct oo
+	{
+		int id;
+		int b;
+
+		XGSON(id, b);
+	};
 	struct user
 	{
 		int id;
 		std::string name;
-		
-		XGSON(id,name)
+		std::vector<int> ints;
+		std::map<std::string, int> int_map_;
+		std::map<std::string, oo> oos;
+		XGSON(id, name, ints, int_map_, oos);
 	};
 
 
@@ -29,8 +34,15 @@ XTEST_SUITE(xjson)
 		user u{ 1,"u1" };
 
 		obj_t o;
+		o = u;
+		auto u0 =  o.get<user>();
+
+		std::cout << o.str() << std::endl;
+
 		o["user"] = u;
 		o["users"].add(u);
+
+		std::cout << o.str() << std::endl;
 
 		xassert(o["user"]["id"].get<int>() == 1);
 		xassert(o["user"]["name"].get<std::string>() == "u1");
@@ -51,6 +63,8 @@ XTEST_SUITE(xjson)
 		{
 			xassert(o["vec"].get<int>(ind - 1) == ind);
 		}
+		auto vec = o["vec"].get<std::vector<int>>();
+
 		user u{ 1,"u1" };
 
 		o["users"].add(u);
@@ -65,6 +79,7 @@ XTEST_SUITE(xjson)
 		xassert(o["1"].get<int>() == 1);
 		xassert(o["2"].get<int>() == 2);
 
+		auto m = o.get<std::map<std::string, int>>();
 
 		o["map"] = std::map<std::string, int>{ { "1",1 },{ "2",2 } };
 
@@ -76,6 +91,9 @@ XTEST_SUITE(xjson)
 
 		obj_t o;
 		o["vec"] = std::list<int>{ 1,2,3,4,5 };
+		o["list_list"] = std::list<std::list<int>>{ {1,2,2,4,5} };
+
+		auto list_list = o["list_list"].get<std::list<std::list<int>>>();
 
 		for (auto &ind : { 1,2,3,4,5 })
 		{

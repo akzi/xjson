@@ -372,7 +372,7 @@ namespace xjson
 			return *this;
 		}
 		template<typename T>
-		obj_t &operator=(const std::map<std::string, T> & vals)
+		obj_t &operator=(std::map<std::string, T> && vals)
 		{
 			if (val_->type_ != e_obj)
 			{
