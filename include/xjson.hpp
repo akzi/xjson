@@ -888,6 +888,8 @@ namespace xjson
 				throw parser_error();
 			if (str[pos] == '{')
 				++pos;
+			if (str[pos] == '[')
+				return get_vec(pos, len, str);
 			while (pos < len)
 			{
 				switch (str[pos])
