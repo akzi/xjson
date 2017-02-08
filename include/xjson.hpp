@@ -886,6 +886,8 @@ namespace xjson
 			skip_space(pos, len, str);
 			if (pos >= len)
 				throw parser_error();
+			if (str[pos] == '[')
+				return get_vec(pos, len, str);
 			if (str[pos] == '{')
 				++pos;
 			while (pos < len)
