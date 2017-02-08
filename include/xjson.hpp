@@ -623,6 +623,46 @@ namespace xjson
 		{
 			return val_->type_;
 		}
+		std::string encode_str(const std::string &str)const
+		{
+			std::string buffer;
+			buffer.reserve(str.size());
+
+			for (auto &itr : str)
+			{
+				switch (itr)
+				{
+				
+				case '\\':
+					buffer.append("\\\\");
+					break;
+				case '"':
+					buffer.append("\\\"");
+					break;
+				case '/':
+					buffer.append("\\/");
+					break;
+				case '\b':
+					buffer.append("\\b");
+					break;
+				case '\f':
+					buffer.append("\\f");
+					break;
+				case '\t':
+					buffer.append("\\t");
+					break;
+				case '\n':
+					buffer.append("\\n");
+					break;
+				case '\r':
+					buffer.append("\\r");
+					break;
+				default:
+					buffer.push_back(itr);
+				}
+			}
+			return buffer;
+		}
 		std::string str()const
 		{
 			switch (val_->type_)
@@ -632,7 +672,7 @@ namespace xjson
 			case e_num:
 				return std::to_string(val_->num_);
 			case e_str:
-				return "\"" + *val_->str_ + "\"";
+				return "\"" + encode_str(*val_->str_) + "\"";
 			case e_obj:
 				do 
 				{
@@ -686,7 +726,21 @@ namespace xjson
 	
 	namespace json_parser
 	{
-		struct parser_error :std::exception {};
+		class error_json :std::logic_error
+		{
+		public:
+			explicit error_json(const std::string &msg)
+				:std::logic_error(msg)
+			{
+
+			}
+
+			explicit error_json(const char *msg)
+				:std::logic_error(msg)
+			{
+
+			}
+		};
 
 		static inline bool
 			skip_space(int &pos, int len, const char * str)
@@ -711,22 +765,61 @@ namespace xjson
 			assert(pos < len);
 			assert(str[pos] == '"');
 
-			std::string key;
+			std::string text;
 			++pos;
+			bool rs = false;
 			while (pos < len)
 			{
-				if (str[pos] != '"')
-					key.push_back(str[pos]);
-				else if (key.size() && key.back() == '\\')
-					key.push_back(str[pos]);
+				if (str[pos] == '\\')
+				{
+					if(!rs)
+						rs = true;
+					else
+					{
+						rs = false;
+						text.push_back(str[pos]);
+					}
+				}
 				else
 				{
-					++pos;
-					return key;
+					if (rs)
+					{
+						rs = false;
+						switch (str[pos])
+						{
+						case 'f':
+							text.push_back('\f');
+							break;
+						case 'b':
+							text.push_back('\b');
+							break;
+						case '/':
+							text.push_back('/');
+							break;
+						case '"':
+							text.push_back('"');
+							break;
+						case 't':
+							text.push_back('\t');
+							break;
+						case 'n':
+							text.push_back('\n');
+							break;
+						default:
+							throw error_json(std::string("\\") + str[pos] + " error");
+						}
+					}
+					else if (str[pos] == '"')
+					{
+						++pos;
+						return text;
+					}
+					else
+						text.push_back(str[pos]);
 				}
 				++pos;
 			}
-			throw parser_error();
+			throw error_json("get_text error");
 		}
 		static inline bool get_bool(int &pos, int len, const char *str)
 		{
@@ -749,7 +842,7 @@ namespace xjson
 			else if (key == "false")
 				return false;
 
-			throw parser_error();
+			throw error_json("get_bool");
 			return false;
 		}
 		static inline nullptr_t get_null(int &pos, int len, const char *str)
@@ -770,7 +863,7 @@ namespace xjson
 			}
 			if (null == "null")
 				return nullptr;
-			throw parser_error();
+			throw error_json("get_null");
 		}
 		static inline std::string get_num(
 			bool &sym, int &pos, int len, const char *str)
@@ -853,14 +946,14 @@ namespace xjson
 						{
 							double d = std::strtod(tmp.c_str(), 0);
 							if (errno == ERANGE)
-								throw parser_error();
+								throw error_json("get_float error");
 							vec.add(d);
 						}
 						else
 						{
 							int64_t val = std::strtoll(tmp.c_str(), 0, 10);
 							if (errno == ERANGE)
-								throw parser_error();
+								throw error_json("get num error");
 							vec.add(val);
 						}
 					}
@@ -873,9 +966,9 @@ namespace xjson
 		#define check_ahead(ch)\
 		do{\
 				if(!skip_space(pos, len, str))\
-					throw parser_error(); \
+					throw error_json("error_json"); \
 					if(str[pos] != ch)\
-						throw parser_error();\
+						throw error_json("error_json");\
 		} while(0)
 
 		static inline obj_t get_obj(int &pos, int len, const char * str)
@@ -885,11 +978,11 @@ namespace xjson
 
 			skip_space(pos, len, str);
 			if (pos >= len)
-				throw parser_error();
-			if (str[pos] == '[')
-				return get_vec(pos, len, str);
+				throw error_json("error json");
 			if (str[pos] == '{')
 				++pos;
+			if (str[pos] == '[')
+				return get_vec(pos, len, str);
 			while (pos < len)
 			{
 				switch (str[pos])
@@ -912,7 +1005,7 @@ namespace xjson
 				case 't':
 				{
 					if (key.empty())
-						throw parser_error();
+						throw error_json("error json");
 					obj[key] = get_bool(pos, len, str);
 					key.clear();
 					break;
@@ -924,20 +1017,20 @@ namespace xjson
 				case '{':
 				{
 					if (key.empty())
-						throw parser_error();
+						throw error_json("error json");
 					obj[key] = std::move(get_obj(pos, len, str));
 					key.clear();
 					break;
 				}
 				case '}':
 					if (key.size())
-						throw parser_error();
+						throw error_json("error json");
 					++pos;
 					return std::move(obj);
 				case ':':
 				{
 					if (key.empty())
-						throw parser_error();
+						throw error_json("error json");
 					++pos;
 					break;
 				}
@@ -969,7 +1062,7 @@ namespace xjson
 						{
 							double d = std::strtod(tmp.c_str(), 0);
 							if (errno == ERANGE)
-								throw parser_error();
+								throw error_json("error json");
 							obj[key] = d;
 							key.clear();
 						}
@@ -977,7 +1070,7 @@ namespace xjson
 						{
 							int64_t val = std::strtoll(tmp.c_str(), 0, 10);
 							if (errno == ERANGE)
-								throw parser_error();
+								throw error_json("error json");
 							obj[key] = val;
 							key.clear();
 						}
